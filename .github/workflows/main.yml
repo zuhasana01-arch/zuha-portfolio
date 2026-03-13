@@ -2,7 +2,7 @@ name: Deploy Vite site to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
   workflow_dispatch:
 
 permissions:
@@ -11,21 +11,21 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20          # ← keep
+          # cache: 'pnpm'           # ← **REMOVE this line** (or change to 'npm')
 
       - name: Enable Corepack
         run: corepack enable
@@ -36,13 +36,13 @@ jobs:
       - name: Verify pnpm
         run: pnpm --version
 
-      - name: Install dependencies
+      - name: Install deps
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build project
+      - name: Build
         run: pnpm build
 
-      - name: Upload build artifact
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
@@ -53,8 +53,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      
