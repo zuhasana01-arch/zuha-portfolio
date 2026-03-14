@@ -1,60 +1,59 @@
+# .github/workflows/main.yml
 name: Deploy Vite site to GitHub Pages
 
 on:
+  # Re-deploy every time you push to the main branch
   push:
-    branches: ['main']
+    branches: [ main ]
+  # …or when you trigger it from the Actions tab
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
+  contents: read        # to fetch code
+  pages:    write       # to upload the static site
+  id-token: write       # required by deploy-pages
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15          # optional safety net
+
     steps:
+      # 1 – Clone your repo
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # 2 – Install Node and **corepack** (enables pnpm automatically)
+      - name: Setup Node (enables pnpm)
         uses: actions/setup-node@v4
         with:
-          node-version: 20          # ← keep
-          # cache: 'pnpm'           # ← **REMOVE this line** (or change to 'npm')
+          node-version: 20
+          cache: pnpm
 
-      - name: Enable Corepack
-        run: corepack enable
+      # 3 – Install deps with pnpm
+      - name: Install dependencies
+        run: |
+          corepack enable           # turns on pnpm that ships with Node
+          pnpm install --frozen-lockfile
 
-      - name: Activate pnpm
-        run: corepack prepare pnpm@latest --activate
+      # 4 – Build for production (outputs to dist by default)
+      - name: Build site
+        run: pnpm run build
 
-      - name: Verify pnpm
-        run: pnpm --version
-
-      - name: Install deps
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
+      # 5 – Upload the produced static files
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
-      - name: Deploy
-        id: deployment
+      - name: Deploy to GitHub Pages
+        id: deploy
         uses: actions/deploy-pages@v4
-      
