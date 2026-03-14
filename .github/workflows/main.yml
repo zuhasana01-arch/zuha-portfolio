@@ -1,48 +1,38 @@
-# .github/workflows/main.yml
 name: Deploy Vite site to GitHub Pages
 
 on:
-  # Re-deploy every time you push to the main branch
   push:
-    branches: [ main ]
-  # …or when you trigger it from the Actions tab
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read        # to fetch code
-  pages:    write       # to upload the static site
-  id-token: write       # required by deploy-pages
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15          # optional safety net
 
     steps:
-      # 1 – Clone your repo
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2 – Install Node and **corepack** (enables pnpm automatically)
-      - name: Setup Node (enables pnpm)
-        uses: actions/setup-node@v4
+      # ---- Node & pnpm ----
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: pnpm          # 💡 enables pnpm cache
 
-      # 3 – Install deps with pnpm
+      - name: Enable pnpm via Corepack
+        run: corepack enable   # 💡 puts pnpm on PATH
+
       - name: Install dependencies
-        run: |
-          corepack enable           # turns on pnpm that ships with Node
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      # 4 – Build for production (outputs to dist by default)
       - name: Build site
-        run: pnpm run build
+        run: pnpm run build    # -> dist/
 
-      # 5 – Upload the produced static files
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
@@ -54,6 +44,5 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
+      - id: deploy
         uses: actions/deploy-pages@v4
