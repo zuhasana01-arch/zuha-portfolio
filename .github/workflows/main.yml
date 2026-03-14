@@ -2,37 +2,53 @@ name: Deploy Vite site to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   workflow_dispatch:
 
+# minimal permissions for Pages
 permissions:
   contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: "deploy-pages"
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1) Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # ---- Node & pnpm ----
-      - uses: actions/setup-node@v4
+      # 2) Set up Node 20
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm          # 💡 enables pnpm cache
+          cache: "pnpm"          # enables automatic pnpm cache
 
-      - name: Enable pnpm via Corepack
-        run: corepack enable   # 💡 puts pnpm on PATH
+      # 3) Install pnpm 8 (official action)  ← **this fixes “pnpm not found”**
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false     # we run install ourselves next step
 
+      # 4) Install dependencies (honours pnpm-lock.yaml)
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 5) Build your Vite site
       - name: Build site
-        run: pnpm run build    # -> dist/
+        run: pnpm run build      # makes ⬆ dist/ by default
 
-      - uses: actions/upload-pages-artifact@v3
+      # 6) Upload build output for the deploy job
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
@@ -41,8 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - id: deploy
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
